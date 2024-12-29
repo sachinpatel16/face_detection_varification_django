@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+
+      .register-form {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        width: 300px;
+      }
+
+      h1 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      input[type="text"] {
+        {% comment %} width: 100%; {% endcomment %}
+        padding: 10px;
+        margin-bottom: 16px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+
+      video {
+        width: 100%;
+        border-radius: 4px;
+        margin-bottom: 16px;
+      }
+
+      canvas {
+        display: none;
+      }
+
+      button {
+        width: 100%;
+        padding: 10px;
+        background-color: #077187;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color:rgba(7, 114, 135, 0.91);
+      }
+
+      .message {
+        text-align: center;
+        margin-top: 10px;
+        font-weight: bold;
+      }
+
+      .success {
+        color: green;
+      }
+
+      .error {
+        color: red;
+      }
+
+      .capture-button {
+        background-color: #077187;
+        color: white;
+        margin-bottom: 16px;
+      }
+
+      .capture-button:hover {
+        background-color: rgba(7, 114, 135, 0.91);
+      }
+
+      .link {
+        text-align: center;
+        margin-top: 20px;
+      }
+
+      .link a {
+        text-decoration: none;
+        color: #007bff;
+      }
+
+      .link a:hover {
+        text-decoration: underline;
+      }
+
+      .input-div {
+        padding: 5px;
+        input {
+          width: 94%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="register-form">
+      <h1>Login</h1>
+      <form id="login-form" method="POST">
+        {% csrf_token %}
+        <div class="input-div">
+          <label for="username">Username:</label>
+          <input type="text" id="username" name="username" required />
+        </div>
+
+        <video id="camera" autoplay></video>
+        <button type="button" class="capture-button" id="capture-button">
+          Capture Photo
+        </button>
+
+        <canvas id="canvas"></canvas>
+        <input type="hidden" id="photo" name="photo" />
+
+        <button type="submit">Login</button>
+      </form>
+
+      {% if message %}
+      <p
+        class="message {% if 'does not' in message %}error{% else %}success{% endif %}"
+      >
+        {{ message }}
+      </p>
+      {% endif %}
+
+      <div class="link">
+        <p>
+          Don't have an account?
+          <a href="{% url 'register' %}">Register here</a>
+        </p>
+      </div>
+    </div>
+
+    <script>
+      const video = document.getElementById("camera");
+      const canvas = document.getElementById("canvas");
+      const captureButton = document.getElementById("capture-button");
+      const photoInput = document.getElementById("photo");
+
+      // Start the camera
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          video.srcObject = stream;
+        })
+        .catch((err) => {
+          console.error("Error accessing the camera: ", err);
+          alert(
+            "Unable to access the camera. Please ensure camera permissions are enabled."
+          );
+        });
+
+      // Capture photo
+      captureButton.addEventListener("click", () => {
+        const context = canvas.getContext("2d");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert the canvas to a base64 image
+        const photoData = canvas.toDataURL("image/png");
+        photoInput.value = photoData;
+
+        alert("Photo captured!");
+      });
+    </script>
+  </body>
+</html>
