@@ -13,3 +13,8 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.username
+
+class Attendance(models.Model):
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="attendance_records")
+    timestamp = models.DateTimeField(default=now)
+    status = models.CharField(max_length=50, default="Present")

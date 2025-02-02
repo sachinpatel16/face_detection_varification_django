@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .input-section {
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            resize: vertical;
+        }
+
+        button {
+            background: #077187;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #055269;
+        }
+
+        .result-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .tab-buttons {
+            margin-bottom: 15px;
+        }
+
+        .tab-button {
+            background: #e9ecef;
+            color: #495057;
+            border: none;
+        }
+
+        .tab-button.active {
+            background: #077187;
+            color: white;
+        }
+
+        #audioVisualizer {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h1>Smart Text Analysis</h1>
+        
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="showTab('text')">Text</button>
+            <button class="tab-button" onclick="showTab('audio')">Audio</button>
+            {% comment %} <button class="tab-button" onclick="showTab('image')">Image</button> {% endcomment %}
+            <button class="tab-button" onclick="startSpeechRecognition()">Speech</button>
+        </div>
+
+        <form id="chatForm">
+            {% csrf_token %}
+            
+            <!-- Text Input -->
+            <div class="input-group" id="textInput">
+                <textarea name="text" rows="4" placeholder="Enter text here..."></textarea>
+            </div>
+
+            <!-- Audio Input -->
+            <div class="input-group hidden" id="audioInput">
+                <input type="file" name="audio" accept="audio/*">
+                <canvas id="audioVisualizer" width="400" height="100"></canvas>
+            </div>
+
+            <!-- Image Input -->
+            <div class="input-group hidden" id="imageInput">
+                <input type="file" name="image" accept="image/*">
+            </div>
+
+            <input type="hidden" name="type" value="text">
+            <button type="submit">Analyze</button>
+        </form>
+
+        <div class="result-section">
+            <h3>Analysis Results:</h3>
+            <pre id="result"></pre>
+        </div>
+    </div>
+
+    <script>
+        let recognition;
+        
+        function showTab(tabName) {
+            document.querySelectorAll('.input-group').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabName + 'Input').classList.remove('hidden');
+            document.querySelector(`button[onclick="showTab('${tabName}')"]`).classList.add('active');
+            document.querySelector('input[name="type"]').value = tabName;
+        }
+
+        function startSpeechRecognition() {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.querySelector('textarea').value = transcript;
+                showTab('text');
+                document.querySelector('input[name="type"]').value = 'speech';
+            }
+            
+            recognition.start();
+        }
+
+        document.getElementById('chatForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const resultElement = document.getElementById('result');
+            
+            try {
+                const response = await fetch('/chat/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultElement.innerHTML = JSON.stringify(data.result, null, 2);
+                } else {
+                    resultElement.innerHTML = `Error: ${data.error}`;
+                }
+            } catch (error) {
+                resultElement.innerHTML = `Error: ${error.message}`;
+            }
+        });
+
+        // Audio visualization
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const analyzer = audioContext.createAnalyser();
+        const canvas = document.getElementById('audioVisualizer');
+        const ctx = canvas.getContext('2d');
+
+        document.querySelector('input[name="audio"]').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function() {
+                audioContext.decodeAudioData(reader.result, function(buffer) {
+                    const source = audioContext.createBufferSource();
+                    source.buffer = buffer;
+                    
+                    source.connect(analyzer);
+                    analyzer.connect(audioContext.destination);
+                    
+                    source.start(0);
+                    visualize();
+                });
+            }
+            
+            reader.readAsArrayBuffer(file);
+        });
+
+        function visualize() {
+            const bufferLength = analyzer.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            function draw() {
+                requestAnimationFrame(draw);
+                analyzer.getByteTimeDomainData(dataArray);
+                
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.beginPath();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#077187';
+                
+                const sliceWidth = canvas.width * 1.0 / bufferLength;
+                let x = 0;
+                
+                for(let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = v * canvas.height/2;
+                    
+                    if(i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                    
+                    x += sliceWidth;
+                }
+                
+                ctx.stroke();
+            }
+            draw();
+        }
+    </script>
+</body>
+</html>

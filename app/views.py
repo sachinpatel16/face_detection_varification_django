@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import UserProfile
+from .models import UserProfile, Attendance
 from PIL import Image
 from io import BytesIO
 import io
@@ -12,13 +12,19 @@ from django.core.files.base import ContentFile
 import numpy as np
 import face_recognition
 import json
-from django.db import IntegrityError
-
+import cv2
+import os
 import hashlib
+import sqlite3
+from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError
+from datetime import datetime
+
+from app.nlp_utils import analyze_text, audio_to_text, image_to_text, safe_json_response
 
 # Create your views here.
 def home(request):
-    return HttpResponse("Hellow, World!")
+    return render(request, 'home.html')
 # import face_recognition
 
 # Registration View
@@ -108,3 +114,88 @@ def login(request):
             message = "Username does not exist"
 
     return render(request, 'login.html', {'message': message})
+
+def mark_attendance(request):
+    # Load known faces and encodings from the database
+    known_faces = []
+    known_ids = []
+
+    for user in UserProfile.objects.all():
+        photo_path = user.photo  # Assuming photo is stored as a file
+        image = face_recognition.load_image_file(photo_path)
+        encodings = face_recognition.face_encodings(image)
+        if encodings:
+            known_faces.append(encodings[0])  # Take the first encoding
+            known_ids.append(user.id)
+
+    # Start webcam for recognition
+    video = cv2.VideoCapture(0)
+
+    try:
+        while True:
+            ret, frame = video.read()
+            if not ret:
+                break
+
+            face_locations = face_recognition.face_locations(frame)
+            face_encodings = face_recognition.face_encodings(frame, face_locations)
+
+            for face_encoding, (top, right, bottom, left) in zip(face_encodings, face_locations):
+                matches = face_recognition.compare_faces(known_faces, face_encoding)
+                if True in matches:
+                    match_index = matches.index(True)
+                    user_id = known_ids[match_index]
+
+                    # Mark attendance
+                    Attendance.objects.get_or_create(
+                        user_id=user_id,
+                        timestamp=datetime.now()
+                    )
+
+                    cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+                    cv2.putText(frame, f"User: {user_id}", (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+            cv2.imshow("Attendance", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+    finally:
+        video.release()
+        cv2.destroyAllWindows()
+
+@login_required
+@csrf_exempt
+def chat(request):
+    if request.method == 'POST':
+        input_type = request.POST.get('type')
+        result = {}
+
+        try:
+            if input_type == 'text':
+                text = request.POST.get('text')
+                result = analyze_text(text)
+            
+            elif input_type == 'audio' and request.FILES.get('audio'):
+                audio_file = request.FILES['audio']
+                text = audio_to_text(audio_file)
+                result = analyze_text(text)
+                result['original_text'] = text
+            
+            elif input_type == 'image' and request.FILES.get('image'):
+                image_file = request.FILES['image']
+                text = image_to_text(image_file)
+                if text:  # Ensure text is not empty
+                    result = analyze_text(text)
+                    result['original_text'] = text
+                else:
+                    result = {"error": "No text found in image."}
+            
+            elif input_type == 'speech':
+                text = request.POST.get('text')
+                result = analyze_text(text)
+            
+            return safe_json_response({'success': True, 'result': result})
+        
+        except Exception as e:
+            return safe_json_response({'success': False, 'error': str(e)})
+
+    return render(request, 'chat.html')

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your NLP Project</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        header {
+            background: #007BFF;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        .cta-button {
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 5px;
+        }
+
+        .auth-buttons {
+            margin-top: 10px;
+        }
+
+        .auth-button {
+            background: #6c757d;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 0 5px;
+        }
+
+        section {
+            padding: 20px;
+            margin: 20px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 10px;
+            background: #333;
+            color: white;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        input, textarea {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #007BFF;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Welcome to Your NLP Project</h1>
+        <br>
+        <div class="auth-buttons">
+            <a href="{% url 'login' %}" class="auth-button">Sign In</a>
+            <a href="{% url 'register' %}" class="auth-button">Sign Up</a>
+            <a href="{% url 'chat' %}" class="auth-button">Start</a>
+        </div>
+    </header>
+
+    <section id="features">
+        <h2>Features</h2>
+        <ul>
+            <li>Feature 1: Text Analysis</li>
+            <li>Feature 2: Sentiment Analysis</li>
+            <li>Feature 3: Language Translation</li>
+            <li>Feature 4: Chatbot Integration</li>
+        </ul>
+    </section>
+
+    <section id="about">
+        <h2>About the Project</h2>
+        <p>This project utilizes advanced NLP techniques to analyze and interpret human language. Our goal is to provide tools that help users gain insights from text data.</p>
+    </section>
+
+
+
+    <footer>
+        <p>&copy; 2023 Your NLP Project. All rights reserved.</p>
+    </footer>
+</body>
+</html>
