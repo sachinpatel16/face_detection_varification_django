@@ -72,9 +72,9 @@ tensorboard==2.18.0
 tensorboard-data-server==0.7.2
 tensorflow==2.18.0
 tensorflow_intel==2.18.0
-termcolor==2.5.0k
+termcolor==2.5.0
 tf_keras==2.18.0
-tokenizers==0.21.0k
+tokenizers==0.21.0
 torch==2.5.1
 transformers==4.47.1
 txaio==23.1.1
